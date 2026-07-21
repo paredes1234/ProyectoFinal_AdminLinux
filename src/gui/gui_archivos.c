@@ -31,6 +31,8 @@ static guint g_refresco_pendiente;
 static guint g_generacion_busqueda;
 static gboolean g_modo_busqueda;
 
+static void on_listar_clicked(GtkButton *btn, gpointer data);
+
 static void formatear_bytes_local(long long bytes, char *salida, int tam) {
     const char *unidades[] = {"B", "KB", "MB", "GB", "TB"};
     double valor = (double) bytes;
@@ -68,5 +70,82 @@ static void refrescar_desde_lista(const ListaArchivos *lista) {
         g_free(ubicacion);
     }
 }
+
+static char *normalizar_ruta(const char *entrada) {
+    const char *ruta = (entrada && entrada[0] != '\0') ? entrada : g_get_home_dir();
+    char resuelta[PATH_MAX];
+    if (realpath(ruta, resuelta)) return g_strdup(resuelta);
+    return g_canonicalize_filename(ruta, NULL);
+}
+
+static void mostrar_directorio(const char *ruta_solicitada) {
+    /* Invalida una búsqueda anterior para que sus resultados no reemplacen
+       la carpeta a la que el usuario acaba de navegar. */
+    g_generacion_busqueda++;
+    if (g_spinner) gtk_spinner_stop(GTK_SPINNER(g_spinner));
+    if (g_btn_buscar) gtk_widget_set_sensitive(g_btn_buscar, TRUE);
+
+    char *ruta = normalizar_ruta(ruta_solicitada);
+    ListaArchivos lista = archivos_obtener_lista(ruta);
+
+    if (lista.items == NULL) {
+        char *mensaje = g_strdup_printf("No se pudo abrir el directorio: %s", ruta);
+        gui_mostrar_error(g_ventana, mensaje);
+        g_free(mensaje);
+        g_free(ruta);
+        return;
+    }
+
+    g_modo_busqueda = FALSE;
+    gtk_entry_set_text(GTK_ENTRY(g_entrada_ruta), ruta);
+    refrescar_desde_lista(&lista);
+    configurar_monitor_directorio(ruta);
+    archivos_lista_liberar(&lista);
+    g_free(ruta);
+}
+
+static void on_fila_activada(GtkTreeView *tree_view,
+                             GtkTreePath *path,
+                             GtkTreeViewColumn *column,
+                             gpointer data) {
+    (void) tree_view;
+    (void) path;
+    (void) column;
+    (void) data;
+
+    if (!seleccion_es_directorio()) return;
+    char *ruta = obtener_ruta_seleccionada();
+    if (ruta) {
+        mostrar_directorio(ruta);
+        g_free(ruta);
+    }
+}
+
+static void on_ir_inicio_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    mostrar_directorio(g_get_home_dir());
+}
+
+static void on_ir_raiz_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    mostrar_directorio("/");
+}
+
+static void on_subir_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    const char *actual = gtk_entry_get_text(GTK_ENTRY(g_entrada_ruta));
+    char *normalizada = normalizar_ruta(actual);
+    char *padre = g_path_get_dirname(normalizada);
+    mostrar_directorio(padre);
+    g_free(padre);
+    g_free(normalizada);
+}
+
+
+
+
 
 
