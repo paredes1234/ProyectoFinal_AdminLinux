@@ -167,5 +167,86 @@ static int copiar_enlace_simbolico(const char *origen, const char *destino) {
     return symlink(objetivo, destino);
 }
 
+static const char *nombre_base_ruta(const char *ruta) {
+    const char *fin = ruta + strlen(ruta);
+    while (fin > ruta + 1 && fin[-1] == '/') fin--;
+
+    const char *inicio = fin;
+    while (inicio > ruta && inicio[-1] != '/') inicio--;
+    return inicio;
+}
+
+static int copiar_elemento_recursivo(const char *origen, const char *destino) {
+    struct stat st;
+    if (lstat(origen, &st) != 0) return -1;
+
+    if (S_ISREG(st.st_mode))
+        return copiar_archivo_regular(origen, destino, st.st_mode);
+
+    if (S_ISLNK(st.st_mode))
+        return copiar_enlace_simbolico(origen, destino);
+
+    if (!S_ISDIR(st.st_mode)) {
+        errno = ENOTSUP;
+        return -1;
+    }
+
+    if (mkdir(destino, st.st_mode & 0777) != 0) {
+        /* Por seguridad no se mezclan carpetas existentes. */
+        return -1;
+    }
+
+    DIR *directorio = opendir(origen);
+    if (!directorio) {
+        int error_guardado = errno;
+        rmdir(destino);
+        errno = error_guardado;
+        return -1;
+    }
+
+    int resultado = 0;
+    struct dirent *entrada;
+    char ruta_origen[PATH_MAX];
+    char ruta_destino[PATH_MAX];
+
+    while ((entrada = readdir(directorio)) != NULL) {
+        if (strcmp(entrada->d_name, ".") == 0 ||
+            strcmp(entrada->d_name, "..") == 0)
+            continue;
+
+        if (!construir_ruta(ruta_origen, sizeof(ruta_origen),
+                            origen, entrada->d_name) ||
+            !construir_ruta(ruta_destino, sizeof(ruta_destino),
+                            destino, entrada->d_name)) {
+            errno = ENAMETOOLONG;
+            resultado = -1;
+            break;
+        }
+
+        if (copiar_elemento_recursivo(ruta_origen, ruta_destino) != 0) {
+            resultado = -1;
+            break;
+        }
+    }
+
+    int error_guardado = errno;
+    if (closedir(directorio) != 0 && resultado == 0) {
+        resultado = -1;
+        error_guardado = errno;
+    }
+
+    if (resultado == 0) {
+        /* Restaurar permisos por si el umask los redujo al crear la carpeta. */
+        chmod(destino, st.st_mode & 0777);
+    }
+
+    errno = error_guardado;
+    return resultado;
+}
+
+
+
+
+
 
 
