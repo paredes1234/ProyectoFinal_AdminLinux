@@ -20,4 +20,8 @@ typedef struct {
     int truncada; /* 1 cuando la búsqueda alcanzó el límite de resultados */
 } ListaArchivos;
 
+void archivos_listar(const char *ruta);
+
+
+
 #endif
