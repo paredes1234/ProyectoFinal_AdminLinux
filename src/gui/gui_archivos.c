@@ -144,6 +144,36 @@ static void on_subir_clicked(GtkButton *btn, gpointer data) {
     g_free(normalizada);
 }
 
+static char *obtener_ruta_seleccionada(void) {
+    GtkTreeSelection *seleccion = gtk_tree_view_get_selection(GTK_TREE_VIEW(g_treeview));
+    GtkTreeModel *modelo;
+    GtkTreeIter iter;
+    if (!gtk_tree_selection_get_selected(seleccion, &modelo, &iter)) return NULL;
+
+    char *ruta = NULL;
+    gtk_tree_model_get(modelo, &iter, COL_A_RUTA_COMPLETA, &ruta, -1);
+    return ruta;
+}
+
+static gboolean seleccion_es_directorio(void) {
+    GtkTreeSelection *seleccion = gtk_tree_view_get_selection(GTK_TREE_VIEW(g_treeview));
+    GtkTreeModel *modelo;
+    GtkTreeIter iter;
+    gboolean es_directorio = FALSE;
+    if (gtk_tree_selection_get_selected(seleccion, &modelo, &iter)) {
+        gtk_tree_model_get(modelo, &iter, COL_A_ES_DIRECTORIO, &es_directorio, -1);
+    }
+    return es_directorio;
+}
+
+
+
+
+
+
+
+
+
 
 
 
