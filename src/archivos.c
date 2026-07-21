@@ -62,10 +62,6 @@ static int comparar_items(const void *a, const void *b) {
     return strcasecmp(ia->nombre, ib->nombre);
 }
 
-/* ===================================================================
- * Variantes que devuelven datos estructurados, usadas por la GUI.
- * =================================================================== */
-
 ListaArchivos archivos_obtener_lista(const char *ruta) {
     ListaArchivos lista = {NULL, 0, 0};
     DIR *d = opendir(ruta);
@@ -157,7 +153,19 @@ static int copiar_archivo_regular(const char *origen,
     return resultado;
 }
 
+static int copiar_enlace_simbolico(const char *origen, const char *destino) {
+    char objetivo[PATH_MAX];
+    ssize_t longitud = readlink(origen, objetivo, sizeof(objetivo) - 1);
+    if (longitud < 0) return -1;
+    objetivo[longitud] = '\0';
 
+    struct stat st_destino;
+    if (lstat(destino, &st_destino) == 0) {
+        errno = EEXIST;
+        return -1;
+    }
+    return symlink(objetivo, destino);
+}
 
 
 
