@@ -109,6 +109,14 @@ ListaArchivos archivos_obtener_lista(const char *ruta) {
     return lista;
 }
 
+void archivos_lista_liberar(ListaArchivos *lista) {
+    if (!lista) return;
+    free(lista->items);
+    lista->items = NULL;
+    lista->total = 0;
+    lista->truncada = 0;
+}
+
 
 
 

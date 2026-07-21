@@ -24,6 +24,7 @@ void archivos_listar(const char *ruta);
 
 /* Variantes que devuelven datos estructurados (usadas por la GUI) */
 ListaArchivos archivos_obtener_lista(const char *ruta);
+void archivos_lista_liberar(ListaArchivos *lista);
 
 
 #endif
