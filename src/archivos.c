@@ -53,3 +53,11 @@ void archivos_listar(const char *ruta) {
     }
     closedir(d);
 }
+
+static int comparar_items(const void *a, const void *b) {
+    const ItemArchivo *ia = a;
+    const ItemArchivo *ib = b;
+    if (ia->es_directorio != ib->es_directorio)
+        return ib->es_directorio - ia->es_directorio;
+    return strcasecmp(ia->nombre, ib->nombre);
+}
