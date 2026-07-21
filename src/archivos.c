@@ -61,3 +61,57 @@ static int comparar_items(const void *a, const void *b) {
         return ib->es_directorio - ia->es_directorio;
     return strcasecmp(ia->nombre, ib->nombre);
 }
+
+/* ===================================================================
+ * Variantes que devuelven datos estructurados, usadas por la GUI.
+ * =================================================================== */
+
+ListaArchivos archivos_obtener_lista(const char *ruta) {
+    ListaArchivos lista = {NULL, 0, 0};
+    DIR *d = opendir(ruta);
+    if (!d) return lista;
+
+    int capacidad = 64;
+    lista.items = malloc(sizeof(ItemArchivo) * (size_t) capacidad);
+    if (!lista.items) {
+        closedir(d);
+        return lista;
+    }
+
+    struct dirent *entrada;
+    char ruta_completa[PATH_MAX];
+    struct stat st;
+
+    while ((entrada = readdir(d)) != NULL) {
+        if (strcmp(entrada->d_name, ".") == 0 || strcmp(entrada->d_name, "..") == 0)
+            continue;
+        if (!construir_ruta(ruta_completa, sizeof(ruta_completa), ruta, entrada->d_name))
+            continue;
+        if (lstat(ruta_completa, &st) != 0) continue;
+
+        if (lista.total >= capacidad) {
+            capacidad *= 2;
+            ItemArchivo *nuevos = realloc(lista.items,
+                                           sizeof(ItemArchivo) * (size_t) capacidad);
+            if (!nuevos) break;
+            lista.items = nuevos;
+        }
+
+        ItemArchivo *item = &lista.items[lista.total++];
+        snprintf(item->nombre, sizeof(item->nombre), "%s", entrada->d_name);
+        snprintf(item->ruta, sizeof(item->ruta), "%s", ruta_completa);
+        item->es_directorio = S_ISDIR(st.st_mode);
+        item->tamano = (long long) st.st_size;
+    }
+    closedir(d);
+
+    qsort(lista.items, (size_t) lista.total, sizeof(ItemArchivo), comparar_items);
+    return lista;
+}
+
+
+
+
+
+
+
