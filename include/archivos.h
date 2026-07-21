@@ -21,6 +21,8 @@ typedef struct {
 } ListaArchivos;
 
 void archivos_listar(const char *ruta);
+int  archivos_copiar(const char *origen, const char *destino);
+
 
 /* Variantes que devuelven datos estructurados (usadas por la GUI) */
 ListaArchivos archivos_obtener_lista(const char *ruta);

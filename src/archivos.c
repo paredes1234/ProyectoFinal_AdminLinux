@@ -283,7 +283,52 @@ static int destino_esta_dentro_de_origen(const char *origen,
             destino_abs[longitud] == '/');
 }
 
+int archivos_copiar(const char *origen, const char *destino) {
+    if (!origen || !destino || origen[0] == '\0' || destino[0] == '\0') {
+        errno = EINVAL;
+        return -1;
+    }
 
+    struct stat st_origen;
+    if (lstat(origen, &st_origen) != 0) return -1;
+
+    char destino_final[PATH_MAX];
+    struct stat st_destino;
+    if (lstat(destino, &st_destino) == 0 && S_ISDIR(st_destino.st_mode)) {
+        const char *nombre = nombre_base_ruta(origen);
+        if (!construir_ruta(destino_final, sizeof(destino_final), destino, nombre)) {
+            errno = ENAMETOOLONG;
+            return -1;
+        }
+    } else {
+        if (snprintf(destino_final, sizeof(destino_final), "%s", destino) >=
+            (int) sizeof(destino_final)) {
+            errno = ENAMETOOLONG;
+            return -1;
+        }
+    }
+
+    if (S_ISDIR(st_origen.st_mode) &&
+        destino_esta_dentro_de_origen(origen, destino_final)) {
+        errno = EINVAL;
+        fprintf(stderr,
+                "No se puede copiar una carpeta dentro de sí misma: %s\n",
+                destino_final);
+        return -1;
+    }
+
+    if (copiar_elemento_recursivo(origen, destino_final) != 0) {
+        fprintf(stderr, "Error al copiar %s hacia %s: %s\n",
+                origen, destino_final, strerror(errno));
+        return -1;
+    }
+
+    char msg[PATH_MAX * 2 + 32];
+    snprintf(msg, sizeof(msg), "Copiado %s -> %s", origen, destino_final);
+    utils_log("archivos", msg);
+    printf(COLOR_OK "Elemento copiado correctamente.\n" COLOR_RESET);
+    return 0;
+}
 
 
 
