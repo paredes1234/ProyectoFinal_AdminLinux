@@ -166,11 +166,58 @@ static gboolean seleccion_es_directorio(void) {
     return es_directorio;
 }
 
+static gboolean ejecutar_refresco_programado(gpointer data) {
+    (void) data;
+    g_refresco_pendiente = 0;
+    if (!g_modo_busqueda) on_listar_clicked(NULL, NULL);
+    return G_SOURCE_REMOVE;
+}
 
+static void on_cambio_directorio(GFileMonitor *monitor,
+                                 GFile *archivo,
+                                 GFile *otro_archivo,
+                                 GFileMonitorEvent evento,
+                                 gpointer data) {
+    (void) monitor;
+    (void) archivo;
+    (void) otro_archivo;
+    (void) evento;
+    (void) data;
 
+    if (g_modo_busqueda) return;
+    if (g_refresco_pendiente != 0) g_source_remove(g_refresco_pendiente);
+    g_refresco_pendiente = g_timeout_add(250, ejecutar_refresco_programado, NULL);
+}
 
+static void configurar_monitor_directorio(const char *ruta) {
+    if (g_monitor_directorio) {
+        g_file_monitor_cancel(g_monitor_directorio);
+        g_clear_object(&g_monitor_directorio);
+    }
 
+    GFile *directorio = g_file_new_for_path(ruta);
+    GError *error = NULL;
+    g_monitor_directorio = g_file_monitor_directory(
+        directorio, G_FILE_MONITOR_WATCH_MOVES, NULL, &error);
+    g_object_unref(directorio);
 
+    if (!g_monitor_directorio) {
+        char *mensaje = g_strdup_printf("Ruta actual: %s (sin monitoreo automático: %s)",
+                                        ruta, error ? error->message : "error desconocido");
+        establecer_estado(mensaje);
+        g_free(mensaje);
+        g_clear_error(&error);
+        return;
+    }
+
+    g_signal_connect(g_monitor_directorio, "changed",
+                     G_CALLBACK(on_cambio_directorio), NULL);
+
+    char *mensaje = g_strdup_printf(
+        "Monitoreando automáticamente: %s — los cambios aparecen sin pulsar Listar", ruta);
+    establecer_estado(mensaje);
+    g_free(mensaje);
+}
 
 
 
