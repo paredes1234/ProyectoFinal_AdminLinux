@@ -244,7 +244,44 @@ static int copiar_elemento_recursivo(const char *origen, const char *destino) {
     return resultado;
 }
 
+static int destino_esta_dentro_de_origen(const char *origen,
+                                         const char *destino_final) {
+    char origen_real[PATH_MAX];
+    if (!realpath(origen, origen_real)) return 0;
 
+    char destino_copia[PATH_MAX];
+    if (snprintf(destino_copia, sizeof(destino_copia), "%s", destino_final) >=
+        (int) sizeof(destino_copia))
+        return 1;
+
+    char *ultima_barra = strrchr(destino_copia, '/');
+    const char *nombre = destino_copia;
+    char padre[PATH_MAX];
+
+    if (ultima_barra) {
+        nombre = ultima_barra + 1;
+        if (ultima_barra == destino_copia)
+            snprintf(padre, sizeof(padre), "/");
+        else {
+            *ultima_barra = '\0';
+            snprintf(padre, sizeof(padre), "%s", destino_copia);
+        }
+    } else {
+        snprintf(padre, sizeof(padre), ".");
+    }
+
+    char padre_real[PATH_MAX];
+    if (!realpath(padre, padre_real)) return 0;
+
+    char destino_abs[PATH_MAX];
+    if (!construir_ruta(destino_abs, sizeof(destino_abs), padre_real, nombre))
+        return 1;
+
+    size_t longitud = strlen(origen_real);
+    return strcmp(destino_abs, origen_real) == 0 ||
+           (strncmp(destino_abs, origen_real, longitud) == 0 &&
+            destino_abs[longitud] == '/');
+}
 
 
 
