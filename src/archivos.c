@@ -117,7 +117,45 @@ void archivos_lista_liberar(ListaArchivos *lista) {
     lista->truncada = 0;
 }
 
+static int copiar_archivo_regular(const char *origen,
+                                  const char *destino,
+                                  mode_t permisos) {
+    int fo = open(origen, O_RDONLY);
+    if (fo < 0) return -1;
 
+    int fd = open(destino, O_WRONLY | O_CREAT | O_TRUNC, permisos & 0777);
+    if (fd < 0) {
+        close(fo);
+        return -1;
+    }
+
+    char buffer[64 * 1024];
+    int resultado = 0;
+    for (;;) {
+        ssize_t leidos = read(fo, buffer, sizeof(buffer));
+        if (leidos == 0) break;
+        if (leidos < 0) {
+            resultado = -1;
+            break;
+        }
+
+        ssize_t enviados = 0;
+        while (enviados < leidos) {
+            ssize_t escritos = write(fd, buffer + enviados,
+                                     (size_t) (leidos - enviados));
+            if (escritos < 0) {
+                resultado = -1;
+                break;
+            }
+            enviados += escritos;
+        }
+        if (resultado != 0) break;
+    }
+
+    if (close(fo) != 0) resultado = -1;
+    if (close(fd) != 0) resultado = -1;
+    return resultado;
+}
 
 
 
