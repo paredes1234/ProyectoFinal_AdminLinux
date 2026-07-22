@@ -138,4 +138,8 @@ char *comandos_obtener_historial_texto(void) {
     return resultado;
 }
 
-
+void comandos_limpiar_historial(void) {
+    FILE *f = fopen(ARCHIVO_HISTORIAL, "w");
+    if (f) fclose(f);
+    printf(COLOR_OK "Historial limpiado.\n" COLOR_RESET);
+}

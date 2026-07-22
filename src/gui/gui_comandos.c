@@ -47,7 +47,11 @@ static void on_historial_clicked(GtkButton *btn, gpointer data) {
     free(historial);
 }
 
-
+static void on_limpiar_historial_clicked(GtkButton *btn, gpointer data) {
+    (void) btn; (void) data;
+    comandos_limpiar_historial();
+    gui_mostrar_info(g_ventana, "Historial", "El historial fue limpiado.");
+}
 
 
 
