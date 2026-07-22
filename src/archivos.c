@@ -551,3 +551,32 @@ ListaArchivos archivos_buscar_lista(const char *ruta_base, const char *patron) {
     return lista;
 }
 
+char *archivos_estadisticas_texto(const char *ruta) {
+    struct stat st;
+    char *resultado = malloc(2048);
+    if (!resultado) return NULL;
+
+    if (lstat(ruta, &st) != 0) {
+        snprintf(resultado, 2048, "No se pudo obtener información de: %s", ruta);
+        return resultado;
+    }
+
+    char tam_fmt[32];
+    utils_formatear_bytes(st.st_size, tam_fmt, sizeof(tam_fmt));
+    char fecha_mod[64];
+    struct tm tm_mod;
+    localtime_r(&st.st_mtime, &tm_mod);
+    strftime(fecha_mod, sizeof(fecha_mod), "%Y-%m-%d %H:%M:%S", &tm_mod);
+
+    const char *tipo = S_ISDIR(st.st_mode) ? "Directorio" :
+                       S_ISLNK(st.st_mode) ? "Enlace simbólico" : "Archivo";
+
+    snprintf(resultado, 2048,
+             "Ruta:          %s\n"
+             "Tamaño:        %s\n"
+             "Tipo:          %s\n"
+             "Permisos:      %o\n"
+             "Última modif.: %s\n",
+             ruta, tam_fmt, tipo, st.st_mode & 0777, fecha_mod);
+    return resultado;
+}

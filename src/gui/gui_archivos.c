@@ -477,4 +477,17 @@ static void on_buscar_clicked(GtkButton *btn, gpointer data) {
     g_thread_unref(hilo);
 }
 
+static void on_estadisticas_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    char *ruta = obtener_ruta_seleccionada();
+    if (!ruta) {
+        gui_mostrar_error(g_ventana, "Selecciona un elemento de la lista.");
+        return;
+    }
 
+    char *texto = archivos_estadisticas_texto(ruta);
+    gui_mostrar_info(g_ventana, "Estadísticas", texto);
+    free(texto);
+    g_free(ruta);
+}

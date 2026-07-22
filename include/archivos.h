@@ -35,6 +35,7 @@ ListaArchivos archivos_obtener_lista(const char *ruta);
 ListaArchivos archivos_buscar_lista(const char *ruta_base, const char *patron);
 
 void archivos_lista_liberar(ListaArchivos *lista);
+char *archivos_estadisticas_texto(const char *ruta); /* el llamador debe hacer free() */
 
 
 #endif
