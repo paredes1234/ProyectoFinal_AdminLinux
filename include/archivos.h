@@ -26,10 +26,13 @@ int  archivos_mover(const char *origen, const char *destino);
 int  archivos_eliminar(const char *ruta);
 int  archivos_crear_directorio(const char *ruta);
 int  archivos_crear_archivo(const char *ruta);
+void archivos_buscar(const char *ruta_base, const char *patron);
 
 
 /* Variantes que devuelven datos estructurados (usadas por la GUI) */
 ListaArchivos archivos_obtener_lista(const char *ruta);
+ListaArchivos archivos_buscar_lista(const char *ruta_base, const char *patron);
+
 void archivos_lista_liberar(ListaArchivos *lista);
 
 

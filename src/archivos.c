@@ -419,13 +419,111 @@ static int nombre_coincide(const char *nombre, const char *patron) {
     return strcasestr(nombre, patron) != NULL;
 }
 
+static void buscar_recursivo(const char *ruta_base, const char *patron, int *encontrados) {
+    if (ruta_virtual_excluida(ruta_base)) return;
 
+    DIR *d = opendir(ruta_base);
+    if (!d) return;
 
+    struct dirent *entrada;
+    char ruta_completa[PATH_MAX];
+    struct stat st;
 
+    while ((entrada = readdir(d)) != NULL) {
+        if (strcmp(entrada->d_name, ".") == 0 || strcmp(entrada->d_name, "..") == 0)
+            continue;
+        if (!construir_ruta(ruta_completa, sizeof(ruta_completa), ruta_base, entrada->d_name))
+            continue;
+        if (lstat(ruta_completa, &st) != 0) continue;
 
+        if (nombre_coincide(entrada->d_name, patron)) {
+            printf("Encontrado: %s\n", ruta_completa);
+            (*encontrados)++;
+        }
 
+        /* No seguir enlaces simbólicos: evita ciclos infinitos. */
+        if (S_ISDIR(st.st_mode) && !S_ISLNK(st.st_mode))
+            buscar_recursivo(ruta_completa, patron, encontrados);
+    }
+    closedir(d);
+}
 
+void archivos_buscar(const char *ruta_base, const char *patron) {
+    utils_titulo("Búsqueda de archivos");
+    int encontrados = 0;
+    buscar_recursivo(ruta_base, patron, &encontrados);
+    if (!encontrados)
+        printf(COLOR_INFO "No se encontraron coincidencias.\n" COLOR_RESET);
+}
 
+static int agregar_resultado(ListaArchivos *lista,
+                             int *capacidad,
+                             const char *nombre,
+                             const char *ruta,
+                             const struct stat *st) {
+    if (lista->total >= LIMITE_RESULTADOS_BUSQUEDA) {
+        lista->truncada = 1;
+        return 0;
+    }
 
+    if (lista->total >= *capacidad) {
+        *capacidad *= 2;
+        ItemArchivo *nuevos = realloc(lista->items,
+                                      sizeof(ItemArchivo) * (size_t) (*capacidad));
+        if (!nuevos) {
+            lista->truncada = 1;
+            return 0;
+        }
+        lista->items = nuevos;
+    }
 
+    ItemArchivo *item = &lista->items[lista->total++];
+    snprintf(item->nombre, sizeof(item->nombre), "%s", nombre);
+    snprintf(item->ruta, sizeof(item->ruta), "%s", ruta);
+    item->es_directorio = S_ISDIR(st->st_mode);
+    item->tamano = (long long) st->st_size;
+    return 1;
+}
+
+static void buscar_lista_recursivo(const char *ruta_base,
+                                   const char *patron,
+                                   ListaArchivos *lista,
+                                   int *capacidad) {
+    if (lista->truncada || ruta_virtual_excluida(ruta_base)) return;
+
+    DIR *d = opendir(ruta_base);
+    if (!d) return;
+
+    struct dirent *entrada;
+    char ruta_completa[PATH_MAX];
+    struct stat st;
+
+    while (!lista->truncada && (entrada = readdir(d)) != NULL) {
+        if (strcmp(entrada->d_name, ".") == 0 || strcmp(entrada->d_name, "..") == 0)
+            continue;
+        if (!construir_ruta(ruta_completa, sizeof(ruta_completa), ruta_base, entrada->d_name))
+            continue;
+        if (lstat(ruta_completa, &st) != 0) continue;
+
+        if (nombre_coincide(entrada->d_name, patron)) {
+            if (!agregar_resultado(lista, capacidad, entrada->d_name, ruta_completa, &st))
+                break;
+        }
+
+        if (S_ISDIR(st.st_mode) && !S_ISLNK(st.st_mode))
+            buscar_lista_recursivo(ruta_completa, patron, lista, capacidad);
+    }
+    closedir(d);
+}
+
+ListaArchivos archivos_buscar_lista(const char *ruta_base, const char *patron) {
+    ListaArchivos lista = {NULL, 0, 0};
+    int capacidad = 64;
+    lista.items = malloc(sizeof(ItemArchivo) * (size_t) capacidad);
+    if (!lista.items) return lista;
+
+    buscar_lista_recursivo(ruta_base, patron, &lista, &capacidad);
+    qsort(lista.items, (size_t) lista.total, sizeof(ItemArchivo), comparar_items);
+    return lista;
+}
 
