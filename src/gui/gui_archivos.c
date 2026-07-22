@@ -381,14 +381,100 @@ static void on_crear_archivo_clicked(GtkButton *btn, gpointer data) {
     g_free(nombre);
 }
 
+typedef struct {
+    char *base;
+    char *patron;
+    guint generacion;
+} TareaBusqueda;
 
+typedef struct {
+    ListaArchivos lista;
+    char *base;
+    char *patron;
+    guint generacion;
+} ResultadoBusquedaGui;
 
+static gboolean mostrar_resultado_busqueda(gpointer data) {
+    ResultadoBusquedaGui *resultado = data;
 
+    if (resultado->generacion == g_generacion_busqueda) {
+        gtk_spinner_stop(GTK_SPINNER(g_spinner));
+        gtk_widget_set_sensitive(g_btn_buscar, TRUE);
+        g_modo_busqueda = TRUE;
+        refrescar_desde_lista(&resultado->lista);
 
+        char *mensaje;
+        if (resultado->lista.truncada) {
+            mensaje = g_strdup_printf(
+                "%d resultados para \"%s\" desde %s (lista limitada para evitar bloquear el sistema)",
+                resultado->lista.total, resultado->patron, resultado->base);
+        } else {
+            mensaje = g_strdup_printf("%d resultado(s) para \"%s\" desde %s",
+                                      resultado->lista.total, resultado->patron, resultado->base);
+        }
+        establecer_estado(mensaje);
+        g_free(mensaje);
 
+        if (resultado->lista.total == 0) {
+            gui_mostrar_info(g_ventana, "Búsqueda", "No se encontraron coincidencias.");
+        }
+    }
 
+    archivos_lista_liberar(&resultado->lista);
+    g_free(resultado->base);
+    g_free(resultado->patron);
+    g_free(resultado);
+    return G_SOURCE_REMOVE;
+}
 
+static gpointer ejecutar_busqueda_hilo(gpointer data) {
+    TareaBusqueda *tarea = data;
+    ResultadoBusquedaGui *resultado = g_new0(ResultadoBusquedaGui, 1);
+    resultado->base = g_strdup(tarea->base);
+    resultado->patron = g_strdup(tarea->patron);
+    resultado->generacion = tarea->generacion;
+    resultado->lista = archivos_buscar_lista(tarea->base, tarea->patron);
 
+    g_idle_add(mostrar_resultado_busqueda, resultado);
+    g_free(tarea->base);
+    g_free(tarea->patron);
+    g_free(tarea);
+    return NULL;
+}
 
+static void on_buscar_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+
+    char *patron = gui_pedir_texto(
+        g_ventana, "Buscar archivos y carpetas", "Texto contenido en el nombre:", "");
+    if (!patron) return;
+    g_strstrip(patron);
+    if (patron[0] == '\0') {
+        g_free(patron);
+        return;
+    }
+
+    gboolean global = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(g_check_busqueda_global));
+    char *base = global
+        ? g_strdup("/")
+        : normalizar_ruta(gtk_entry_get_text(GTK_ENTRY(g_entrada_ruta)));
+
+    g_generacion_busqueda++;
+    gtk_widget_set_sensitive(g_btn_buscar, FALSE);
+    gtk_spinner_start(GTK_SPINNER(g_spinner));
+
+    char *mensaje = g_strdup_printf("Buscando \"%s\" desde %s...", patron, base);
+    establecer_estado(mensaje);
+    g_free(mensaje);
+
+    TareaBusqueda *tarea = g_new0(TareaBusqueda, 1);
+    tarea->base = base;
+    tarea->patron = patron;
+    tarea->generacion = g_generacion_busqueda;
+
+    GThread *hilo = g_thread_new("busqueda-archivos", ejecutar_busqueda_hilo, tarea);
+    g_thread_unref(hilo);
+}
 
 
