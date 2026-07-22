@@ -219,7 +219,43 @@ static void configurar_monitor_directorio(const char *ruta) {
     g_free(mensaje);
 }
 
+static void on_copiar_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    char *origen = obtener_ruta_seleccionada();
+    if (!origen) {
+        gui_mostrar_error(g_ventana, "Selecciona un archivo o carpeta de la lista.");
+        return;
+    }
 
+    gboolean es_directorio = seleccion_es_directorio();
+    char *sugerencia = g_strdup_printf("%s_copia", origen);
+    char *destino = gui_pedir_texto(
+        g_ventana,
+        es_directorio ? "Copiar carpeta completa" : "Copiar archivo",
+        "Ruta nueva o carpeta de destino:",
+        sugerencia);
+    g_free(sugerencia);
+
+    if (destino) {
+        g_strstrip(destino);
+        if (destino[0] == '\0') {
+            gui_mostrar_error(g_ventana, "La ruta de destino no puede estar vacía.");
+        } else if (archivos_copiar(origen, destino) == 0) {
+            gui_mostrar_info(g_ventana, "Copiar", "Elemento copiado correctamente.");
+            if (!g_modo_busqueda) on_listar_clicked(NULL, NULL);
+        } else {
+            int error_copia = errno;
+            char *mensaje = g_strdup_printf(
+                "No se pudo copiar el elemento.\n\nDetalle: %s",
+                g_strerror(error_copia));
+            gui_mostrar_error(g_ventana, mensaje);
+            g_free(mensaje);
+        }
+        g_free(destino);
+    }
+    g_free(origen);
+}
 
 
 
