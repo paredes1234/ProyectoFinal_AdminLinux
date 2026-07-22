@@ -279,8 +279,57 @@ static void on_mover_clicked(GtkButton *btn, gpointer data) {
     g_free(origen);
 }
 
+static void on_eliminar_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    char *ruta = obtener_ruta_seleccionada();
+    if (!ruta) {
+        gui_mostrar_error(g_ventana, "Selecciona un elemento de la lista.");
+        return;
+    }
 
+    GtkWidget *confirmacion = gtk_message_dialog_new(
+        GTK_WINDOW(g_ventana), GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
+        GTK_BUTTONS_YES_NO, "¿Eliminar \"%s\"?", ruta);
+    int respuesta = gtk_dialog_run(GTK_DIALOG(confirmacion));
+    gtk_widget_destroy(confirmacion);
 
+    if (respuesta == GTK_RESPONSE_YES) {
+        if (archivos_eliminar(ruta) == 0) {
+            if (!g_modo_busqueda) on_listar_clicked(NULL, NULL);
+            else gtk_list_store_clear(g_store);
+        } else {
+            gui_mostrar_error(g_ventana,
+                "No se pudo eliminar. Las carpetas deben estar vacías y debes tener permisos.");
+        }
+    }
+    g_free(ruta);
+}
+
+static void on_crear_carpeta_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    if (g_modo_busqueda) {
+        gui_mostrar_error(g_ventana, "Primero entra a una carpeta usando Inicio, Raíz o Listar.");
+        return;
+    }
+
+    char *nombre = gui_pedir_texto(g_ventana, "Nueva carpeta", "Nombre de la carpeta:", "Nueva carpeta");
+    if (!nombre) return;
+    g_strstrip(nombre);
+    if (nombre[0] == '\0' || strchr(nombre, '/')) {
+        gui_mostrar_error(g_ventana, "Escribe un nombre válido, sin '/'.");
+        g_free(nombre);
+        return;
+    }
+
+    const char *base = gtk_entry_get_text(GTK_ENTRY(g_entrada_ruta));
+    char *ruta = g_build_filename(base, nombre, NULL);
+    if (archivos_crear_directorio(ruta) != 0)
+        gui_mostrar_error(g_ventana, "No se pudo crear la carpeta. Revisa permisos o si ya existe.");
+    g_free(ruta);
+    g_free(nombre);
+}
 
 
 

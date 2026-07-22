@@ -371,7 +371,15 @@ int archivos_eliminar(const char *ruta) {
     return -1;
 }
 
-
+int archivos_crear_directorio(const char *ruta) {
+    if (mkdir(ruta, 0755) == 0) {
+        char msg[PATH_MAX + 64];
+        snprintf(msg, sizeof(msg), "Directorio creado: %s", ruta);
+        utils_log("archivos", msg);
+        return 0;
+    }
+    return -1;
+}
 
 
 
