@@ -330,5 +330,42 @@ int archivos_copiar(const char *origen, const char *destino) {
     return 0;
 }
 
+int archivos_mover(const char *origen, const char *destino) {
+    if (rename(origen, destino) == 0) {
+        printf(COLOR_OK "Elemento movido correctamente.\n" COLOR_RESET);
+        return 0;
+    }
+
+    struct stat st;
+    if (lstat(origen, &st) == 0 && S_ISREG(st.st_mode)) {
+        /* Si un archivo regular está en otro filesystem, copiar y eliminar. */
+        if (archivos_copiar(origen, destino) == 0 && remove(origen) == 0) {
+            printf(COLOR_OK "Archivo movido (copia + eliminación).\n" COLOR_RESET);
+            return 0;
+        }
+    }
+    return -1;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
