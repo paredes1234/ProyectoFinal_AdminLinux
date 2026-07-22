@@ -456,6 +456,30 @@ void archivos_buscar(const char *ruta_base, const char *patron) {
         printf(COLOR_INFO "No se encontraron coincidencias.\n" COLOR_RESET);
 }
 
+void archivos_estadisticas(const char *ruta) {
+    struct stat st;
+    if (lstat(ruta, &st) != 0) {
+        perror("lstat");
+        return;
+    }
+
+    char tam_fmt[32];
+    utils_formatear_bytes(st.st_size, tam_fmt, sizeof(tam_fmt));
+
+    char fecha_mod[64];
+    struct tm tm_mod;
+    localtime_r(&st.st_mtime, &tm_mod);
+    strftime(fecha_mod, sizeof(fecha_mod), "%Y-%m-%d %H:%M:%S", &tm_mod);
+
+    utils_titulo("Estadísticas");
+    printf("Ruta:            %s\n", ruta);
+    printf("Tamaño:          %s\n", tam_fmt);
+    printf("Tipo:            %s\n", S_ISDIR(st.st_mode) ? "Directorio" :
+                                      S_ISLNK(st.st_mode) ? "Enlace" : "Archivo");
+    printf("Permisos:        %o\n", st.st_mode & 0777);
+    printf("Última modif.:   %s\n", fecha_mod);
+}
+
 static int agregar_resultado(ListaArchivos *lista,
                              int *capacidad,
                              const char *nombre,
