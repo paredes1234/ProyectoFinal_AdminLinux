@@ -403,9 +403,21 @@ int archivos_crear_archivo(const char *ruta) {
     return 0;
 }
 
+static int ruta_virtual_excluida(const char *ruta) {
+    static const char *excluidas[] = {"/proc", "/sys", "/dev", "/run"};
+    for (size_t i = 0; i < sizeof(excluidas) / sizeof(excluidas[0]); i++) {
+        size_t n = strlen(excluidas[i]);
+        if (strncmp(ruta, excluidas[i], n) == 0 &&
+            (ruta[n] == '\0' || ruta[n] == '/'))
+            return 1;
+    }
+    return 0;
+}
 
-
-
+static int nombre_coincide(const char *nombre, const char *patron) {
+    if (!patron || patron[0] == '\0') return 1;
+    return strcasestr(nombre, patron) != NULL;
+}
 
 
 
