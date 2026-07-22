@@ -23,6 +23,14 @@ static int construir_ruta(char *salida, size_t tam, const char *base, const char
     return escritos >= 0 && (size_t) escritos < tam;
 }
 
+static int comparar_items(const void *a, const void *b) {
+    const ItemArchivo *ia = a;
+    const ItemArchivo *ib = b;
+    if (ia->es_directorio != ib->es_directorio)
+        return ib->es_directorio - ia->es_directorio;
+    return strcasecmp(ia->nombre, ib->nombre);
+}
+
 void archivos_listar(const char *ruta) {
     DIR *d = opendir(ruta);
     if (!d) {
@@ -54,63 +62,13 @@ void archivos_listar(const char *ruta) {
     closedir(d);
 }
 
-static int comparar_items(const void *a, const void *b) {
-    const ItemArchivo *ia = a;
-    const ItemArchivo *ib = b;
-    if (ia->es_directorio != ib->es_directorio)
-        return ib->es_directorio - ia->es_directorio;
-    return strcasecmp(ia->nombre, ib->nombre);
-}
+static const char *nombre_base_ruta(const char *ruta) {
+    const char *fin = ruta + strlen(ruta);
+    while (fin > ruta + 1 && fin[-1] == '/') fin--;
 
-ListaArchivos archivos_obtener_lista(const char *ruta) {
-    ListaArchivos lista = {NULL, 0, 0};
-    DIR *d = opendir(ruta);
-    if (!d) return lista;
-
-    int capacidad = 64;
-    lista.items = malloc(sizeof(ItemArchivo) * (size_t) capacidad);
-    if (!lista.items) {
-        closedir(d);
-        return lista;
-    }
-
-    struct dirent *entrada;
-    char ruta_completa[PATH_MAX];
-    struct stat st;
-
-    while ((entrada = readdir(d)) != NULL) {
-        if (strcmp(entrada->d_name, ".") == 0 || strcmp(entrada->d_name, "..") == 0)
-            continue;
-        if (!construir_ruta(ruta_completa, sizeof(ruta_completa), ruta, entrada->d_name))
-            continue;
-        if (lstat(ruta_completa, &st) != 0) continue;
-
-        if (lista.total >= capacidad) {
-            capacidad *= 2;
-            ItemArchivo *nuevos = realloc(lista.items,
-                                           sizeof(ItemArchivo) * (size_t) capacidad);
-            if (!nuevos) break;
-            lista.items = nuevos;
-        }
-
-        ItemArchivo *item = &lista.items[lista.total++];
-        snprintf(item->nombre, sizeof(item->nombre), "%s", entrada->d_name);
-        snprintf(item->ruta, sizeof(item->ruta), "%s", ruta_completa);
-        item->es_directorio = S_ISDIR(st.st_mode);
-        item->tamano = (long long) st.st_size;
-    }
-    closedir(d);
-
-    qsort(lista.items, (size_t) lista.total, sizeof(ItemArchivo), comparar_items);
-    return lista;
-}
-
-void archivos_lista_liberar(ListaArchivos *lista) {
-    if (!lista) return;
-    free(lista->items);
-    lista->items = NULL;
-    lista->total = 0;
-    lista->truncada = 0;
+    const char *inicio = fin;
+    while (inicio > ruta && inicio[-1] != '/') inicio--;
+    return inicio;
 }
 
 static int copiar_archivo_regular(const char *origen,
@@ -165,15 +123,6 @@ static int copiar_enlace_simbolico(const char *origen, const char *destino) {
         return -1;
     }
     return symlink(objetivo, destino);
-}
-
-static const char *nombre_base_ruta(const char *ruta) {
-    const char *fin = ruta + strlen(ruta);
-    while (fin > ruta + 1 && fin[-1] == '/') fin--;
-
-    const char *inicio = fin;
-    while (inicio > ruta && inicio[-1] != '/') inicio--;
-    return inicio;
 }
 
 static int copiar_elemento_recursivo(const char *origen, const char *destino) {
@@ -392,17 +341,6 @@ int archivos_crear_archivo(const char *ruta) {
     return 0;
 }
 
-int archivos_crear_archivo(const char *ruta) {
-    int fd = open(ruta, O_WRONLY | O_CREAT | O_EXCL, 0644);
-    if (fd < 0) return -1;
-    close(fd);
-
-    char msg[PATH_MAX + 64];
-    snprintf(msg, sizeof(msg), "Archivo creado: %s", ruta);
-    utils_log("archivos", msg);
-    return 0;
-}
-
 static int ruta_virtual_excluida(const char *ruta) {
     static const char *excluidas[] = {"/proc", "/sys", "/dev", "/run"};
     for (size_t i = 0; i < sizeof(excluidas) / sizeof(excluidas[0]); i++) {
@@ -480,6 +418,53 @@ void archivos_estadisticas(const char *ruta) {
     printf("Última modif.:   %s\n", fecha_mod);
 }
 
+/* ===================================================================
+ * Variantes que devuelven datos estructurados, usadas por la GUI.
+ * =================================================================== */
+
+ListaArchivos archivos_obtener_lista(const char *ruta) {
+    ListaArchivos lista = {NULL, 0, 0};
+    DIR *d = opendir(ruta);
+    if (!d) return lista;
+
+    int capacidad = 64;
+    lista.items = malloc(sizeof(ItemArchivo) * (size_t) capacidad);
+    if (!lista.items) {
+        closedir(d);
+        return lista;
+    }
+
+    struct dirent *entrada;
+    char ruta_completa[PATH_MAX];
+    struct stat st;
+
+    while ((entrada = readdir(d)) != NULL) {
+        if (strcmp(entrada->d_name, ".") == 0 || strcmp(entrada->d_name, "..") == 0)
+            continue;
+        if (!construir_ruta(ruta_completa, sizeof(ruta_completa), ruta, entrada->d_name))
+            continue;
+        if (lstat(ruta_completa, &st) != 0) continue;
+
+        if (lista.total >= capacidad) {
+            capacidad *= 2;
+            ItemArchivo *nuevos = realloc(lista.items,
+                                           sizeof(ItemArchivo) * (size_t) capacidad);
+            if (!nuevos) break;
+            lista.items = nuevos;
+        }
+
+        ItemArchivo *item = &lista.items[lista.total++];
+        snprintf(item->nombre, sizeof(item->nombre), "%s", entrada->d_name);
+        snprintf(item->ruta, sizeof(item->ruta), "%s", ruta_completa);
+        item->es_directorio = S_ISDIR(st.st_mode);
+        item->tamano = (long long) st.st_size;
+    }
+    closedir(d);
+
+    qsort(lista.items, (size_t) lista.total, sizeof(ItemArchivo), comparar_items);
+    return lista;
+}
+
 static int agregar_resultado(ListaArchivos *lista,
                              int *capacidad,
                              const char *nombre,
@@ -549,6 +534,14 @@ ListaArchivos archivos_buscar_lista(const char *ruta_base, const char *patron) {
     buscar_lista_recursivo(ruta_base, patron, &lista, &capacidad);
     qsort(lista.items, (size_t) lista.total, sizeof(ItemArchivo), comparar_items);
     return lista;
+}
+
+void archivos_lista_liberar(ListaArchivos *lista) {
+    if (!lista) return;
+    free(lista->items);
+    lista->items = NULL;
+    lista->total = 0;
+    lista->truncada = 0;
 }
 
 char *archivos_estadisticas_texto(const char *ruta) {

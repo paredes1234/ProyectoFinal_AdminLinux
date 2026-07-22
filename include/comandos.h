@@ -9,9 +9,10 @@ typedef struct {
 
 void comandos_ejecutar(const char *cmd);
 void comandos_mostrar_historial(void);
+void comandos_limpiar_historial(void);
 
+/* Variante que devuelve la salida en memoria (usada por la GUI) */
+ResultadoComando comandos_ejecutar_capturar(const char *cmd);
 char *comandos_obtener_historial_texto(void); /* el llamador debe hacer free() */
 
-
-
-
+#endif

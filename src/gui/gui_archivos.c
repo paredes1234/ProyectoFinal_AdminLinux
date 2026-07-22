@@ -71,101 +71,6 @@ static void refrescar_desde_lista(const ListaArchivos *lista) {
     }
 }
 
-static char *normalizar_ruta(const char *entrada) {
-    const char *ruta = (entrada && entrada[0] != '\0') ? entrada : g_get_home_dir();
-    char resuelta[PATH_MAX];
-    if (realpath(ruta, resuelta)) return g_strdup(resuelta);
-    return g_canonicalize_filename(ruta, NULL);
-}
-
-static void mostrar_directorio(const char *ruta_solicitada) {
-    /* Invalida una búsqueda anterior para que sus resultados no reemplacen
-       la carpeta a la que el usuario acaba de navegar. */
-    g_generacion_busqueda++;
-    if (g_spinner) gtk_spinner_stop(GTK_SPINNER(g_spinner));
-    if (g_btn_buscar) gtk_widget_set_sensitive(g_btn_buscar, TRUE);
-
-    char *ruta = normalizar_ruta(ruta_solicitada);
-    ListaArchivos lista = archivos_obtener_lista(ruta);
-
-    if (lista.items == NULL) {
-        char *mensaje = g_strdup_printf("No se pudo abrir el directorio: %s", ruta);
-        gui_mostrar_error(g_ventana, mensaje);
-        g_free(mensaje);
-        g_free(ruta);
-        return;
-    }
-
-    g_modo_busqueda = FALSE;
-    gtk_entry_set_text(GTK_ENTRY(g_entrada_ruta), ruta);
-    refrescar_desde_lista(&lista);
-    configurar_monitor_directorio(ruta);
-    archivos_lista_liberar(&lista);
-    g_free(ruta);
-}
-
-static void on_fila_activada(GtkTreeView *tree_view,
-                             GtkTreePath *path,
-                             GtkTreeViewColumn *column,
-                             gpointer data) {
-    (void) tree_view;
-    (void) path;
-    (void) column;
-    (void) data;
-
-    if (!seleccion_es_directorio()) return;
-    char *ruta = obtener_ruta_seleccionada();
-    if (ruta) {
-        mostrar_directorio(ruta);
-        g_free(ruta);
-    }
-}
-
-static void on_ir_inicio_clicked(GtkButton *btn, gpointer data) {
-    (void) btn;
-    (void) data;
-    mostrar_directorio(g_get_home_dir());
-}
-
-static void on_ir_raiz_clicked(GtkButton *btn, gpointer data) {
-    (void) btn;
-    (void) data;
-    mostrar_directorio("/");
-}
-
-static void on_subir_clicked(GtkButton *btn, gpointer data) {
-    (void) btn;
-    (void) data;
-    const char *actual = gtk_entry_get_text(GTK_ENTRY(g_entrada_ruta));
-    char *normalizada = normalizar_ruta(actual);
-    char *padre = g_path_get_dirname(normalizada);
-    mostrar_directorio(padre);
-    g_free(padre);
-    g_free(normalizada);
-}
-
-static char *obtener_ruta_seleccionada(void) {
-    GtkTreeSelection *seleccion = gtk_tree_view_get_selection(GTK_TREE_VIEW(g_treeview));
-    GtkTreeModel *modelo;
-    GtkTreeIter iter;
-    if (!gtk_tree_selection_get_selected(seleccion, &modelo, &iter)) return NULL;
-
-    char *ruta = NULL;
-    gtk_tree_model_get(modelo, &iter, COL_A_RUTA_COMPLETA, &ruta, -1);
-    return ruta;
-}
-
-static gboolean seleccion_es_directorio(void) {
-    GtkTreeSelection *seleccion = gtk_tree_view_get_selection(GTK_TREE_VIEW(g_treeview));
-    GtkTreeModel *modelo;
-    GtkTreeIter iter;
-    gboolean es_directorio = FALSE;
-    if (gtk_tree_selection_get_selected(seleccion, &modelo, &iter)) {
-        gtk_tree_model_get(modelo, &iter, COL_A_ES_DIRECTORIO, &es_directorio, -1);
-    }
-    return es_directorio;
-}
-
 static gboolean ejecutar_refresco_programado(gpointer data) {
     (void) data;
     g_refresco_pendiente = 0;
@@ -217,6 +122,108 @@ static void configurar_monitor_directorio(const char *ruta) {
         "Monitoreando automáticamente: %s — los cambios aparecen sin pulsar Listar", ruta);
     establecer_estado(mensaje);
     g_free(mensaje);
+}
+
+static char *normalizar_ruta(const char *entrada) {
+    const char *ruta = (entrada && entrada[0] != '\0') ? entrada : g_get_home_dir();
+    char resuelta[PATH_MAX];
+    if (realpath(ruta, resuelta)) return g_strdup(resuelta);
+    return g_canonicalize_filename(ruta, NULL);
+}
+
+static void mostrar_directorio(const char *ruta_solicitada) {
+    /* Invalida una búsqueda anterior para que sus resultados no reemplacen
+       la carpeta a la que el usuario acaba de navegar. */
+    g_generacion_busqueda++;
+    if (g_spinner) gtk_spinner_stop(GTK_SPINNER(g_spinner));
+    if (g_btn_buscar) gtk_widget_set_sensitive(g_btn_buscar, TRUE);
+
+    char *ruta = normalizar_ruta(ruta_solicitada);
+    ListaArchivos lista = archivos_obtener_lista(ruta);
+
+    if (lista.items == NULL) {
+        char *mensaje = g_strdup_printf("No se pudo abrir el directorio: %s", ruta);
+        gui_mostrar_error(g_ventana, mensaje);
+        g_free(mensaje);
+        g_free(ruta);
+        return;
+    }
+
+    g_modo_busqueda = FALSE;
+    gtk_entry_set_text(GTK_ENTRY(g_entrada_ruta), ruta);
+    refrescar_desde_lista(&lista);
+    configurar_monitor_directorio(ruta);
+    archivos_lista_liberar(&lista);
+    g_free(ruta);
+}
+
+static void on_listar_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    mostrar_directorio(gtk_entry_get_text(GTK_ENTRY(g_entrada_ruta)));
+}
+
+/* Devuelve la ruta completa almacenada en la fila seleccionada. */
+static char *obtener_ruta_seleccionada(void) {
+    GtkTreeSelection *seleccion = gtk_tree_view_get_selection(GTK_TREE_VIEW(g_treeview));
+    GtkTreeModel *modelo;
+    GtkTreeIter iter;
+    if (!gtk_tree_selection_get_selected(seleccion, &modelo, &iter)) return NULL;
+
+    char *ruta = NULL;
+    gtk_tree_model_get(modelo, &iter, COL_A_RUTA_COMPLETA, &ruta, -1);
+    return ruta;
+}
+
+static gboolean seleccion_es_directorio(void) {
+    GtkTreeSelection *seleccion = gtk_tree_view_get_selection(GTK_TREE_VIEW(g_treeview));
+    GtkTreeModel *modelo;
+    GtkTreeIter iter;
+    gboolean es_directorio = FALSE;
+    if (gtk_tree_selection_get_selected(seleccion, &modelo, &iter)) {
+        gtk_tree_model_get(modelo, &iter, COL_A_ES_DIRECTORIO, &es_directorio, -1);
+    }
+    return es_directorio;
+}
+
+static void on_fila_activada(GtkTreeView *tree_view,
+                             GtkTreePath *path,
+                             GtkTreeViewColumn *column,
+                             gpointer data) {
+    (void) tree_view;
+    (void) path;
+    (void) column;
+    (void) data;
+
+    if (!seleccion_es_directorio()) return;
+    char *ruta = obtener_ruta_seleccionada();
+    if (ruta) {
+        mostrar_directorio(ruta);
+        g_free(ruta);
+    }
+}
+
+static void on_ir_inicio_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    mostrar_directorio(g_get_home_dir());
+}
+
+static void on_ir_raiz_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    mostrar_directorio("/");
+}
+
+static void on_subir_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    const char *actual = gtk_entry_get_text(GTK_ENTRY(g_entrada_ruta));
+    char *normalizada = normalizar_ruta(actual);
+    char *padre = g_path_get_dirname(normalizada);
+    mostrar_directorio(padre);
+    g_free(padre);
+    g_free(normalizada);
 }
 
 static void on_copiar_clicked(GtkButton *btn, gpointer data) {
@@ -304,81 +311,6 @@ static void on_eliminar_clicked(GtkButton *btn, gpointer data) {
         }
     }
     g_free(ruta);
-}
-
-static void on_crear_carpeta_clicked(GtkButton *btn, gpointer data) {
-    (void) btn;
-    (void) data;
-    if (g_modo_busqueda) {
-        gui_mostrar_error(g_ventana, "Primero entra a una carpeta usando Inicio, Raíz o Listar.");
-        return;
-    }
-
-    char *nombre = gui_pedir_texto(g_ventana, "Nueva carpeta", "Nombre de la carpeta:", "Nueva carpeta");
-    if (!nombre) return;
-    g_strstrip(nombre);
-    if (nombre[0] == '\0' || strchr(nombre, '/')) {
-        gui_mostrar_error(g_ventana, "Escribe un nombre válido, sin '/'.");
-        g_free(nombre);
-        return;
-    }
-
-    const char *base = gtk_entry_get_text(GTK_ENTRY(g_entrada_ruta));
-    char *ruta = g_build_filename(base, nombre, NULL);
-    if (archivos_crear_directorio(ruta) != 0)
-        gui_mostrar_error(g_ventana, "No se pudo crear la carpeta. Revisa permisos o si ya existe.");
-    g_free(ruta);
-    g_free(nombre);
-}
-
-static void on_crear_archivo_clicked(GtkButton *btn, gpointer data) {
-    (void) btn;
-    (void) data;
-    if (g_modo_busqueda) {
-        gui_mostrar_error(g_ventana, "Primero entra a una carpeta usando Inicio, Raíz o Listar.");
-        return;
-    }
-
-    char *nombre = gui_pedir_texto(g_ventana, "Nuevo archivo", "Nombre del archivo:", "nuevo.txt");
-    if (!nombre) return;
-    g_strstrip(nombre);
-    if (nombre[0] == '\0' || strchr(nombre, '/')) {
-        gui_mostrar_error(g_ventana, "Escribe un nombre válido, sin '/'.");
-        g_free(nombre);
-        return;
-    }
-
-    const char *base = gtk_entry_get_text(GTK_ENTRY(g_entrada_ruta));
-    char *ruta = g_build_filename(base, nombre, NULL);
-    if (archivos_crear_archivo(ruta) != 0)
-        gui_mostrar_error(g_ventana, "No se pudo crear el archivo. Revisa permisos o si ya existe.");
-    g_free(ruta);
-    g_free(nombre);
-}
-
-static void on_crear_archivo_clicked(GtkButton *btn, gpointer data) {
-    (void) btn;
-    (void) data;
-    if (g_modo_busqueda) {
-        gui_mostrar_error(g_ventana, "Primero entra a una carpeta usando Inicio, Raíz o Listar.");
-        return;
-    }
-
-    char *nombre = gui_pedir_texto(g_ventana, "Nuevo archivo", "Nombre del archivo:", "nuevo.txt");
-    if (!nombre) return;
-    g_strstrip(nombre);
-    if (nombre[0] == '\0' || strchr(nombre, '/')) {
-        gui_mostrar_error(g_ventana, "Escribe un nombre válido, sin '/'.");
-        g_free(nombre);
-        return;
-    }
-
-    const char *base = gtk_entry_get_text(GTK_ENTRY(g_entrada_ruta));
-    char *ruta = g_build_filename(base, nombre, NULL);
-    if (archivos_crear_archivo(ruta) != 0)
-        gui_mostrar_error(g_ventana, "No se pudo crear el archivo. Revisa permisos o si ya existe.");
-    g_free(ruta);
-    g_free(nombre);
 }
 
 typedef struct {
@@ -477,6 +409,56 @@ static void on_buscar_clicked(GtkButton *btn, gpointer data) {
     g_thread_unref(hilo);
 }
 
+static void on_crear_carpeta_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    if (g_modo_busqueda) {
+        gui_mostrar_error(g_ventana, "Primero entra a una carpeta usando Inicio, Raíz o Listar.");
+        return;
+    }
+
+    char *nombre = gui_pedir_texto(g_ventana, "Nueva carpeta", "Nombre de la carpeta:", "Nueva carpeta");
+    if (!nombre) return;
+    g_strstrip(nombre);
+    if (nombre[0] == '\0' || strchr(nombre, '/')) {
+        gui_mostrar_error(g_ventana, "Escribe un nombre válido, sin '/'.");
+        g_free(nombre);
+        return;
+    }
+
+    const char *base = gtk_entry_get_text(GTK_ENTRY(g_entrada_ruta));
+    char *ruta = g_build_filename(base, nombre, NULL);
+    if (archivos_crear_directorio(ruta) != 0)
+        gui_mostrar_error(g_ventana, "No se pudo crear la carpeta. Revisa permisos o si ya existe.");
+    g_free(ruta);
+    g_free(nombre);
+}
+
+static void on_crear_archivo_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    if (g_modo_busqueda) {
+        gui_mostrar_error(g_ventana, "Primero entra a una carpeta usando Inicio, Raíz o Listar.");
+        return;
+    }
+
+    char *nombre = gui_pedir_texto(g_ventana, "Nuevo archivo", "Nombre del archivo:", "nuevo.txt");
+    if (!nombre) return;
+    g_strstrip(nombre);
+    if (nombre[0] == '\0' || strchr(nombre, '/')) {
+        gui_mostrar_error(g_ventana, "Escribe un nombre válido, sin '/'.");
+        g_free(nombre);
+        return;
+    }
+
+    const char *base = gtk_entry_get_text(GTK_ENTRY(g_entrada_ruta));
+    char *ruta = g_build_filename(base, nombre, NULL);
+    if (archivos_crear_archivo(ruta) != 0)
+        gui_mostrar_error(g_ventana, "No se pudo crear el archivo. Revisa permisos o si ya existe.");
+    g_free(ruta);
+    g_free(nombre);
+}
+
 static void on_estadisticas_clicked(GtkButton *btn, gpointer data) {
     (void) btn;
     (void) data;
@@ -490,4 +472,102 @@ static void on_estadisticas_clicked(GtkButton *btn, gpointer data) {
     gui_mostrar_info(g_ventana, "Estadísticas", texto);
     free(texto);
     g_free(ruta);
+}
+
+GtkWidget *gui_archivos_crear_tab(GtkWidget *ventana_principal) {
+    g_ventana = ventana_principal;
+
+    GtkWidget *caja = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+    gtk_container_set_border_width(GTK_CONTAINER(caja), 10);
+
+    GtkWidget *barra_navegacion = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    GtkWidget *btn_inicio = gtk_button_new_with_label("Inicio");
+    GtkWidget *btn_raiz = gtk_button_new_with_label("Raíz /");
+    GtkWidget *btn_subir = gtk_button_new_with_label("Subir");
+    g_entrada_ruta = gtk_entry_new();
+    gtk_entry_set_text(GTK_ENTRY(g_entrada_ruta), g_get_home_dir());
+    gtk_widget_set_hexpand(g_entrada_ruta, TRUE);
+    GtkWidget *btn_listar = gtk_button_new_with_label("Listar / actualizar");
+
+    gtk_box_pack_start(GTK_BOX(barra_navegacion), btn_inicio, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(barra_navegacion), btn_raiz, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(barra_navegacion), btn_subir, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(barra_navegacion), g_entrada_ruta, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(barra_navegacion), btn_listar, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(caja), barra_navegacion, FALSE, FALSE, 0);
+
+    GtkWidget *barra_busqueda = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    g_btn_buscar = gtk_button_new_with_label("Buscar...");
+    g_check_busqueda_global = gtk_check_button_new_with_label("Buscar en todo el sistema");
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g_check_busqueda_global), TRUE);
+    g_spinner = gtk_spinner_new();
+    g_label_estado = gtk_label_new("");
+    gtk_label_set_xalign(GTK_LABEL(g_label_estado), 0.0f);
+    gtk_widget_set_hexpand(g_label_estado, TRUE);
+
+    gtk_box_pack_start(GTK_BOX(barra_busqueda), g_btn_buscar, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(barra_busqueda), g_check_busqueda_global, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(barra_busqueda), g_spinner, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(barra_busqueda), g_label_estado, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(caja), barra_busqueda, FALSE, FALSE, 0);
+
+    g_store = gtk_list_store_new(
+        N_COLUMNAS_ARCH,
+        G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
+        G_TYPE_STRING, G_TYPE_BOOLEAN);
+    g_treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(g_store));
+    gtk_tree_view_set_headers_clickable(GTK_TREE_VIEW(g_treeview), TRUE);
+    gtk_tree_view_set_enable_search(GTK_TREE_VIEW(g_treeview), TRUE);
+    gtk_tree_view_set_search_column(GTK_TREE_VIEW(g_treeview), COL_A_NOMBRE);
+
+    const char *titulos[] = {"Nombre", "Tipo", "Tamaño", "Ubicación"};
+    for (int i = 0; i < 4; i++) {
+        GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
+        GtkTreeViewColumn *columna = gtk_tree_view_column_new_with_attributes(
+            titulos[i], renderer, "text", i, NULL);
+        gtk_tree_view_column_set_resizable(columna, TRUE);
+        gtk_tree_view_column_set_expand(columna, i == COL_A_NOMBRE || i == COL_A_UBICACION);
+        gtk_tree_view_column_set_sort_column_id(columna, i);
+        gtk_tree_view_append_column(GTK_TREE_VIEW(g_treeview), columna);
+    }
+
+    GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+                                   GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    gtk_widget_set_vexpand(scroll, TRUE);
+    gtk_container_add(GTK_CONTAINER(scroll), g_treeview);
+    gtk_box_pack_start(GTK_BOX(caja), scroll, TRUE, TRUE, 0);
+
+    GtkWidget *barra_acciones = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    GtkWidget *btn_nueva_carpeta = gtk_button_new_with_label("Nueva carpeta");
+    GtkWidget *btn_nuevo_archivo = gtk_button_new_with_label("Nuevo archivo");
+    GtkWidget *btn_copiar = gtk_button_new_with_label("Copiar");
+    GtkWidget *btn_mover = gtk_button_new_with_label("Mover");
+    GtkWidget *btn_eliminar = gtk_button_new_with_label("Eliminar");
+    GtkWidget *btn_stats = gtk_button_new_with_label("Estadísticas");
+
+    gtk_box_pack_start(GTK_BOX(barra_acciones), btn_nueva_carpeta, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(barra_acciones), btn_nuevo_archivo, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(barra_acciones), btn_copiar, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(barra_acciones), btn_mover, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(barra_acciones), btn_eliminar, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(barra_acciones), btn_stats, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(caja), barra_acciones, FALSE, FALSE, 0);
+
+    g_signal_connect(btn_inicio, "clicked", G_CALLBACK(on_ir_inicio_clicked), NULL);
+    g_signal_connect(btn_raiz, "clicked", G_CALLBACK(on_ir_raiz_clicked), NULL);
+    g_signal_connect(btn_subir, "clicked", G_CALLBACK(on_subir_clicked), NULL);
+    g_signal_connect(btn_listar, "clicked", G_CALLBACK(on_listar_clicked), NULL);
+    g_signal_connect(g_entrada_ruta, "activate", G_CALLBACK(on_listar_clicked), NULL);
+    g_signal_connect(g_btn_buscar, "clicked", G_CALLBACK(on_buscar_clicked), NULL);
+    g_signal_connect(g_treeview, "row-activated", G_CALLBACK(on_fila_activada), NULL);
+    g_signal_connect(btn_nueva_carpeta, "clicked", G_CALLBACK(on_crear_carpeta_clicked), NULL);
+    g_signal_connect(btn_nuevo_archivo, "clicked", G_CALLBACK(on_crear_archivo_clicked), NULL);
+    g_signal_connect(btn_copiar, "clicked", G_CALLBACK(on_copiar_clicked), NULL);
+    g_signal_connect(btn_mover, "clicked", G_CALLBACK(on_mover_clicked), NULL);
+    g_signal_connect(btn_eliminar, "clicked", G_CALLBACK(on_eliminar_clicked), NULL);
+    g_signal_connect(btn_stats, "clicked", G_CALLBACK(on_estadisticas_clicked), NULL);
+
+    mostrar_directorio(g_get_home_dir());
+    return caja;
 }

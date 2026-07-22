@@ -18,6 +18,8 @@ static void guardar_en_historial(const char *cmd) {
     fclose(f);
 }
 
+/* Ejecuta un comando con fork+exec, separando stdout y stderr mediante pipes,
+   y devolviendo ambos flujos en memoria (buffers reservados con malloc). */
 ResultadoComando comandos_ejecutar_capturar(const char *cmd) {
     ResultadoComando resultado = { strdup(""), strdup(""), -1 };
 
@@ -89,6 +91,7 @@ ResultadoComando comandos_ejecutar_capturar(const char *cmd) {
     return resultado;
 }
 
+/* Versión CLI: reutiliza la captura y simplemente imprime el resultado */
 void comandos_ejecutar(const char *cmd) {
     ResultadoComando r = comandos_ejecutar_capturar(cmd);
 
@@ -116,6 +119,12 @@ void comandos_mostrar_historial(void) {
     fclose(f);
 }
 
+void comandos_limpiar_historial(void) {
+    FILE *f = fopen(ARCHIVO_HISTORIAL, "w");
+    if (f) fclose(f);
+    printf(COLOR_OK "Historial limpiado.\n" COLOR_RESET);
+}
+
 char *comandos_obtener_historial_texto(void) {
     FILE *f = fopen(ARCHIVO_HISTORIAL, "r");
     if (!f) return strdup("No hay historial todavía.\n");
@@ -136,10 +145,4 @@ char *comandos_obtener_historial_texto(void) {
     }
     fclose(f);
     return resultado;
-}
-
-void comandos_limpiar_historial(void) {
-    FILE *f = fopen(ARCHIVO_HISTORIAL, "w");
-    if (f) fclose(f);
-    printf(COLOR_OK "Historial limpiado.\n" COLOR_RESET);
 }
