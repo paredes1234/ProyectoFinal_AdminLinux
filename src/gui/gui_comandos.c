@@ -40,7 +40,12 @@ static void on_ejecutar_clicked(GtkButton *btn, gpointer data) {
     gtk_entry_set_text(GTK_ENTRY(g_entrada_comando), "");
 }
 
-
+static void on_historial_clicked(GtkButton *btn, gpointer data) {
+    (void) btn; (void) data;
+    char *historial = comandos_obtener_historial_texto();
+    gui_mostrar_texto_largo(g_ventana, "Historial de comandos", historial);
+    free(historial);
+}
 
 
 

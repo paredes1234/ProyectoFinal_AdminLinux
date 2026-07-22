@@ -6,3 +6,9 @@ typedef struct {
     char *salida_error;    /* el llamador debe hacer free() */
     int codigo_salida;
 } ResultadoComando;
+
+void comandos_ejecutar(const char *cmd);
+void comandos_mostrar_historial(void);
+
+
+

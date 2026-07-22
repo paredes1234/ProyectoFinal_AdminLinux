@@ -104,7 +104,38 @@ void comandos_ejecutar(const char *cmd) {
     free(r.salida_error);
 }
 
+void comandos_mostrar_historial(void) {
+    FILE *f = fopen(ARCHIVO_HISTORIAL, "r");
+    if (!f) { printf(COLOR_INFO "No hay historial todavía.\n" COLOR_RESET); return; }
 
+    utils_titulo("Historial de comandos");
+    char linea[512];
+    while (fgets(linea, sizeof(linea), f)) {
+        printf("%s", linea);
+    }
+    fclose(f);
+}
 
+char *comandos_obtener_historial_texto(void) {
+    FILE *f = fopen(ARCHIVO_HISTORIAL, "r");
+    if (!f) return strdup("No hay historial todavía.\n");
+
+    size_t cap = 4096, usado = 0;
+    char *resultado = malloc(cap);
+    resultado[0] = '\0';
+
+    char linea[512];
+    while (fgets(linea, sizeof(linea), f)) {
+        size_t len = strlen(linea);
+        if (usado + len + 1 > cap) {
+            cap = (cap + len + 1) * 2;
+            resultado = realloc(resultado, cap);
+        }
+        memcpy(resultado + usado, linea, len + 1);
+        usado += len;
+    }
+    fclose(f);
+    return resultado;
+}
 
 
