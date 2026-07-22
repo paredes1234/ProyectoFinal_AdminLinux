@@ -53,6 +53,10 @@ static void on_limpiar_historial_clicked(GtkButton *btn, gpointer data) {
     gui_mostrar_info(g_ventana, "Historial", "El historial fue limpiado.");
 }
 
+static void on_limpiar_pantalla_clicked(GtkButton *btn, gpointer data) {
+    (void) btn; (void) data;
+    gtk_text_buffer_set_text(g_buffer_salida, "", -1);
+}
 
 
 
