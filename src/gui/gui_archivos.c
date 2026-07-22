@@ -331,5 +331,64 @@ static void on_crear_carpeta_clicked(GtkButton *btn, gpointer data) {
     g_free(nombre);
 }
 
+static void on_crear_archivo_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    if (g_modo_busqueda) {
+        gui_mostrar_error(g_ventana, "Primero entra a una carpeta usando Inicio, Raíz o Listar.");
+        return;
+    }
+
+    char *nombre = gui_pedir_texto(g_ventana, "Nuevo archivo", "Nombre del archivo:", "nuevo.txt");
+    if (!nombre) return;
+    g_strstrip(nombre);
+    if (nombre[0] == '\0' || strchr(nombre, '/')) {
+        gui_mostrar_error(g_ventana, "Escribe un nombre válido, sin '/'.");
+        g_free(nombre);
+        return;
+    }
+
+    const char *base = gtk_entry_get_text(GTK_ENTRY(g_entrada_ruta));
+    char *ruta = g_build_filename(base, nombre, NULL);
+    if (archivos_crear_archivo(ruta) != 0)
+        gui_mostrar_error(g_ventana, "No se pudo crear el archivo. Revisa permisos o si ya existe.");
+    g_free(ruta);
+    g_free(nombre);
+}
+
+static void on_crear_archivo_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    if (g_modo_busqueda) {
+        gui_mostrar_error(g_ventana, "Primero entra a una carpeta usando Inicio, Raíz o Listar.");
+        return;
+    }
+
+    char *nombre = gui_pedir_texto(g_ventana, "Nuevo archivo", "Nombre del archivo:", "nuevo.txt");
+    if (!nombre) return;
+    g_strstrip(nombre);
+    if (nombre[0] == '\0' || strchr(nombre, '/')) {
+        gui_mostrar_error(g_ventana, "Escribe un nombre válido, sin '/'.");
+        g_free(nombre);
+        return;
+    }
+
+    const char *base = gtk_entry_get_text(GTK_ENTRY(g_entrada_ruta));
+    char *ruta = g_build_filename(base, nombre, NULL);
+    if (archivos_crear_archivo(ruta) != 0)
+        gui_mostrar_error(g_ventana, "No se pudo crear el archivo. Revisa permisos o si ya existe.");
+    g_free(ruta);
+    g_free(nombre);
+}
+
+
+
+
+
+
+
+
+
+
 
 

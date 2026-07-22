@@ -381,9 +381,27 @@ int archivos_crear_directorio(const char *ruta) {
     return -1;
 }
 
+int archivos_crear_archivo(const char *ruta) {
+    int fd = open(ruta, O_WRONLY | O_CREAT | O_EXCL, 0644);
+    if (fd < 0) return -1;
+    close(fd);
 
+    char msg[PATH_MAX + 64];
+    snprintf(msg, sizeof(msg), "Archivo creado: %s", ruta);
+    utils_log("archivos", msg);
+    return 0;
+}
 
+int archivos_crear_archivo(const char *ruta) {
+    int fd = open(ruta, O_WRONLY | O_CREAT | O_EXCL, 0644);
+    if (fd < 0) return -1;
+    close(fd);
 
+    char msg[PATH_MAX + 64];
+    snprintf(msg, sizeof(msg), "Archivo creado: %s", ruta);
+    utils_log("archivos", msg);
+    return 0;
+}
 
 
 
