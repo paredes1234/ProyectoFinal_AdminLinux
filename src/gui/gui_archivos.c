@@ -257,6 +257,28 @@ static void on_copiar_clicked(GtkButton *btn, gpointer data) {
     g_free(origen);
 }
 
+static void on_mover_clicked(GtkButton *btn, gpointer data) {
+    (void) btn;
+    (void) data;
+    char *origen = obtener_ruta_seleccionada();
+    if (!origen) {
+        gui_mostrar_error(g_ventana, "Selecciona un archivo o carpeta de la lista.");
+        return;
+    }
+
+    char *destino = gui_pedir_texto(g_ventana, "Mover elemento", "Ruta de destino:", origen);
+    if (destino) {
+        if (archivos_mover(origen, destino) == 0) {
+            gui_mostrar_info(g_ventana, "Mover", "Elemento movido correctamente.");
+            if (!g_modo_busqueda) on_listar_clicked(NULL, NULL);
+        } else {
+            gui_mostrar_error(g_ventana, "No se pudo mover el elemento.");
+        }
+        g_free(destino);
+    }
+    g_free(origen);
+}
+
 
 
 
