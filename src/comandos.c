@@ -89,7 +89,20 @@ ResultadoComando comandos_ejecutar_capturar(const char *cmd) {
     return resultado;
 }
 
+void comandos_ejecutar(const char *cmd) {
+    ResultadoComando r = comandos_ejecutar_capturar(cmd);
 
+    printf(COLOR_OK "--- Salida estándar ---\n" COLOR_RESET);
+    printf("%s", r.salida_estandar);
+
+    printf(COLOR_ERROR "--- Salida de error ---\n" COLOR_RESET);
+    printf("%s", r.salida_error);
+
+    printf(COLOR_INFO "Código de salida: %d\n" COLOR_RESET, r.codigo_salida);
+
+    free(r.salida_estandar);
+    free(r.salida_error);
+}
 
 
 
