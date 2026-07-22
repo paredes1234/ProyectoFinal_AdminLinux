@@ -23,6 +23,7 @@ typedef struct {
 void archivos_listar(const char *ruta);
 int  archivos_copiar(const char *origen, const char *destino);
 int  archivos_mover(const char *origen, const char *destino);
+int  archivos_eliminar(const char *ruta);
 
 
 /* Variantes que devuelven datos estructurados (usadas por la GUI) */

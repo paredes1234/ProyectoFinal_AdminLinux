@@ -347,7 +347,29 @@ int archivos_mover(const char *origen, const char *destino) {
     return -1;
 }
 
+int archivos_eliminar(const char *ruta) {
+    struct stat st;
+    if (lstat(ruta, &st) != 0) {
+        perror("lstat");
+        return -1;
+    }
 
+    if (S_ISDIR(st.st_mode)) {
+        if (rmdir(ruta) == 0) {
+            printf(COLOR_OK "Directorio eliminado.\n" COLOR_RESET);
+            return 0;
+        }
+        printf(COLOR_ERROR "El directorio no está vacío o no se pudo eliminar.\n" COLOR_RESET);
+        return -1;
+    }
+
+    if (remove(ruta) == 0) {
+        printf(COLOR_OK "Archivo eliminado.\n" COLOR_RESET);
+        return 0;
+    }
+    perror("remove");
+    return -1;
+}
 
 
 
