@@ -83,3 +83,74 @@ static void on_restaurar_clicked(GtkButton *btn, gpointer data) {
     gui_mostrar_info(g_ventana, "Restaurar respaldo", mensaje);
     g_free(version);
 }
+
+/* ---------------- Análisis Bash ---------------- */
+
+static void on_analizar_bash_clicked(GtkButton *btn, gpointer data) {
+    (void) btn; (void) data;
+    const char *ruta = gtk_entry_get_text(GTK_ENTRY(g_entrada_script));
+    if (ruta[0] == '\0') {
+        gui_mostrar_error(g_ventana, "Indica la ruta de un script .sh");
+        return;
+    }
+
+    ResultadoAnalisisBash r = bash_analizar_script_datos(ruta);
+
+    GString *texto = g_string_new(NULL);
+    g_string_append_printf(texto, "%s\n", r.detalle);
+    g_string_append_printf(texto,
+        "--- Resumen ---\n"
+        "Líneas analizadas: %d\n"
+        "Variables únicas: %d\n"
+        "Ciclos FOR: %d\n"
+        "Ciclos WHILE: %d\n"
+        "Ciclos UNTIL: %d\n"
+        "Condicionales IF: %d\n"
+        "Funciones: %d\n",
+        r.total_lineas, r.total_vars, r.num_for, r.num_while, r.num_until, r.num_if, r.num_func);
+
+    gtk_text_buffer_set_text(g_buffer_bash, texto->str, -1);
+    g_string_free(texto, TRUE);
+    free(r.detalle);
+}
+
+/* ---------------- Cola de descargas ---------------- */
+
+static void refrescar_cola_visual(void) {
+    gtk_list_store_clear(g_store_cola);
+    ColaSnapshot snap = respaldos_cola_obtener();
+    GtkTreeIter iter;
+    for (int i = 0; i < snap.total; i++) {
+        gtk_list_store_append(g_store_cola, &iter);
+        gtk_list_store_set(g_store_cola, &iter, COL_COLA_ITEM, snap.items[i], -1);
+    }
+}
+
+static void on_agregar_cola_clicked(GtkButton *btn, gpointer data) {
+    (void) btn; (void) data;
+    const char *texto = gtk_entry_get_text(GTK_ENTRY(g_entrada_cola));
+    if (texto[0] == '\0') return;
+    respaldos_cola_agregar(texto);
+    gtk_entry_set_text(GTK_ENTRY(g_entrada_cola), "");
+    refrescar_cola_visual();
+}
+
+/* Callback invocado por el core mientras procesa la cola; actualiza la barra
+   de progreso y procesa eventos pendientes para no congelar la ventana. */
+static void progreso_callback(const char *item, int pct, void *ud) {
+    (void) ud;
+    char etiqueta[560];
+    snprintf(etiqueta, sizeof(etiqueta), "%s (%d%%)", item, pct);
+    gtk_progress_bar_set_text(GTK_PROGRESS_BAR(g_barra_progreso), etiqueta);
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(g_barra_progreso), pct / 100.0);
+
+    while (gtk_events_pending()) gtk_main_iteration();
+}
+
+static void on_procesar_cola_clicked(GtkButton *btn, gpointer data) {
+    (void) btn; (void) data;
+    respaldos_cola_procesar_cb(progreso_callback, NULL);
+    gtk_progress_bar_set_text(GTK_PROGRESS_BAR(g_barra_progreso), "Completado");
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(g_barra_progreso), 1.0);
+    refrescar_cola_visual();
+}
