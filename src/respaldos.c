@@ -123,3 +123,102 @@ int respaldos_restaurar(const char *destino_base, const char *version, const cha
            restaurados, ruta_restauracion);
     return restaurados;
 }
+
+/* ---------- Cola de descargas (con progreso simulado) ---------- */
+
+static char g_cola[MAX_COLA][512];
+static int g_cola_tam = 0;
+
+int respaldos_cola_agregar(const char *url_o_ruta) {
+    if (g_cola_tam >= MAX_COLA) {
+        printf(COLOR_ERROR "Cola llena.\n" COLOR_RESET);
+        return -1;
+    }
+    strncpy(g_cola[g_cola_tam], url_o_ruta, 511);
+    g_cola_tam++;
+    printf(COLOR_OK "Agregado a la cola: %s\n" COLOR_RESET, url_o_ruta);
+    return 0;
+}
+
+void respaldos_cola_mostrar(void) {
+    utils_titulo("Cola de descargas");
+    if (g_cola_tam == 0) { printf(COLOR_INFO "La cola está vacía.\n" COLOR_RESET); return; }
+    for (int i = 0; i < g_cola_tam; i++) {
+        printf("%d. %s\n", i + 1, g_cola[i]);
+    }
+}
+
+/* Procesa la cola emitiendo eventos de progreso por cada elemento.
+   Aquí se simula el avance; en una versión real se integraría con
+   una descarga real (p. ej. usando sockets o una librería HTTP). */
+void respaldos_cola_procesar(void) {
+    if (g_cola_tam == 0) {
+        printf(COLOR_INFO "No hay elementos en la cola.\n" COLOR_RESET);
+        return;
+    }
+
+    utils_titulo("Procesando cola de descargas");
+    for (int i = 0; i < g_cola_tam; i++) {
+        printf("Descargando: %s\n", g_cola[i]);
+        for (int p = 0; p <= 100; p += 20) {
+            printf("\r  Progreso: [%-20s] %d%%", "", p);
+            fflush(stdout);
+            /* Barra de progreso visual */
+            printf("\r  Progreso: [");
+            int lleno = p / 5;
+            for (int b = 0; b < 20; b++) printf(b < lleno ? "#" : " ");
+            printf("] %d%%", p);
+            fflush(stdout);
+            usleep(80000);
+        }
+        printf("\n" COLOR_OK "  Completado.\n" COLOR_RESET);
+
+        char msg[600];
+        snprintf(msg, sizeof(msg), "Descarga completada: %s", g_cola[i]);
+        utils_log("respaldos", msg);
+    }
+    g_cola_tam = 0;
+}
+
+/* ===================================================================
+ * Variantes para GUI
+ * =================================================================== */
+
+ListaVersiones respaldos_obtener_versiones(const char *destino_base) {
+    ListaVersiones lista = { .total = 0 };
+    DIR *d = opendir(destino_base);
+    if (!d) return lista;
+
+    struct dirent *entrada;
+    while ((entrada = readdir(d)) != NULL && lista.total < 64) {
+        if (entrada->d_name[0] == '.') continue;
+        strncpy(lista.nombres[lista.total], entrada->d_name, 127);
+        lista.nombres[lista.total][127] = '\0';
+        lista.total++;
+    }
+    closedir(d);
+    return lista;
+}
+
+ColaSnapshot respaldos_cola_obtener(void) {
+    ColaSnapshot snap;
+    snap.total = g_cola_tam;
+    for (int i = 0; i < g_cola_tam; i++) {
+        strncpy(snap.items[i], g_cola[i], 511);
+        snap.items[i][511] = '\0';
+    }
+    return snap;
+}
+
+void respaldos_cola_procesar_cb(void (*on_progreso)(const char *item, int pct, void *ud), void *ud) {
+    for (int i = 0; i < g_cola_tam; i++) {
+        for (int p = 0; p <= 100; p += 10) {
+            if (on_progreso) on_progreso(g_cola[i], p, ud);
+            usleep(60000);
+        }
+        char msg[600];
+        snprintf(msg, sizeof(msg), "Descarga completada: %s", g_cola[i]);
+        utils_log("respaldos", msg);
+    }
+    g_cola_tam = 0;
+}
