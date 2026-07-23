@@ -94,3 +94,32 @@ int respaldos_crear_incremental(const char *origen, const char *destino_base) {
     printf(COLOR_OK "Respaldo completado: %d archivo(s) copiados.\n" COLOR_RESET, copiados);
     return copiados;
 }
+
+void respaldos_listar_versiones(const char *destino_base) {
+    DIR *d = opendir(destino_base);
+    if (!d) { printf(COLOR_INFO "No hay respaldos todavía.\n" COLOR_RESET); return; }
+
+    utils_titulo("Versiones de respaldo disponibles");
+    struct dirent *entrada;
+    while ((entrada = readdir(d)) != NULL) {
+        if (entrada->d_name[0] == '.') continue;
+        printf("- %s\n", entrada->d_name);
+    }
+    closedir(d);
+}
+
+int respaldos_restaurar(const char *destino_base, const char *version, const char *ruta_restauracion) {
+    char origen_version[1024];
+    snprintf(origen_version, sizeof(origen_version), "%s/%s", destino_base, version);
+
+    struct stat st;
+    if (stat(origen_version, &st) != 0) {
+        printf(COLOR_ERROR "La versión '%s' no existe.\n" COLOR_RESET, version);
+        return -1;
+    }
+
+    int restaurados = copiar_directorio_recursivo(origen_version, ruta_restauracion, 0);
+    printf(COLOR_OK "Restauración completada: %d archivo(s) restaurados en %s\n" COLOR_RESET,
+           restaurados, ruta_restauracion);
+    return restaurados;
+}
