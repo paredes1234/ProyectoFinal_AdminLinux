@@ -142,3 +142,86 @@ static void menu_comandos(void) {
         }
     } while (opcion != 0);
 }
+
+static void menu_respaldos(void) {
+    char buffer[LINEA_MAX], b2[LINEA_MAX];
+    int opcion;
+    do {
+        utils_titulo("RESPALDOS Y ANÁLISIS BASH");
+        printf("1. Crear respaldo incremental\n");
+        printf("2. Listar versiones de respaldo\n");
+        printf("3. Restaurar una versión\n");
+        printf("4. Analizar script Bash\n");
+        printf("5. Agregar elemento a cola de descargas\n");
+        printf("6. Ver cola de descargas\n");
+        printf("7. Procesar cola de descargas\n");
+        printf("0. Volver al menú principal\n");
+        printf("Opción: ");
+        leer_linea(buffer, sizeof(buffer));
+        opcion = atoi(buffer);
+
+        switch (opcion) {
+            case 1:
+                printf("Directorio origen: "); leer_linea(buffer, sizeof(buffer));
+                printf("Directorio de respaldos: "); leer_linea(b2, sizeof(b2));
+                respaldos_crear_incremental(buffer, b2);
+                break;
+            case 2:
+                printf("Directorio de respaldos: ");
+                leer_linea(buffer, sizeof(buffer));
+                respaldos_listar_versiones(buffer);
+                break;
+            case 3: {
+                char b3[LINEA_MAX];
+                printf("Directorio de respaldos: "); leer_linea(buffer, sizeof(buffer));
+                printf("Versión (carpeta): "); leer_linea(b2, sizeof(b2));
+                printf("Ruta de restauración: "); leer_linea(b3, sizeof(b3));
+                respaldos_restaurar(buffer, b2, b3);
+                break;
+            }
+            case 4:
+                printf("Ruta del script .sh: ");
+                leer_linea(buffer, sizeof(buffer));
+                bash_analizar_script(buffer);
+                break;
+            case 5:
+                printf("URL o ruta a encolar: ");
+                leer_linea(buffer, sizeof(buffer));
+                respaldos_cola_agregar(buffer);
+                break;
+            case 6: respaldos_cola_mostrar(); break;
+            case 7: respaldos_cola_procesar(); break;
+        }
+    } while (opcion != 0);
+}
+
+int main(void) {
+    mkdir("logs", 0755);
+
+    char buffer[LINEA_MAX];
+    int opcion;
+
+    do {
+        printf("\n");
+        utils_titulo("ADMIN - Herramienta de Administración Linux");
+        printf("1. Administrador de Tareas\n");
+        printf("2. Shell de Archivos\n");
+        printf("3. Comandos Linux\n");
+        printf("4. Respaldos / Análisis Bash / Descargas\n");
+        printf("0. Salir\n");
+        printf("Opción: ");
+        leer_linea(buffer, sizeof(buffer));
+        opcion = atoi(buffer);
+
+        switch (opcion) {
+            case 1: menu_procesos(); break;
+            case 2: menu_archivos(); break;
+            case 3: menu_comandos(); break;
+            case 4: menu_respaldos(); break;
+            case 0: printf("Saliendo...\n"); break;
+            default: printf(COLOR_ERROR "Opción inválida.\n" COLOR_RESET);
+        }
+    } while (opcion != 0);
+
+    return 0;
+}
