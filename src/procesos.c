@@ -106,3 +106,67 @@ void procesos_listar(void) {
     }
     closedir(d);
 }
+
+void procesos_buscar_por_nombre(const char *nombre) {
+    DIR *d = opendir("/proc");
+    if (!d) return;
+
+    utils_titulo("Resultados de búsqueda");
+    int encontrados = 0;
+    struct dirent *entrada;
+    while ((entrada = readdir(d)) != NULL) {
+        if (!isdigit((unsigned char) entrada->d_name[0])) continue;
+        int pid = atoi(entrada->d_name);
+        InfoProceso info;
+        if (procesos_obtener_info(pid, &info) == 0 && strstr(info.nombre, nombre)) {
+            printf("PID: %-8d PPID: %-8d NOMBRE: %-20s ESTADO: %s\n",
+                   info.pid, info.ppid, info.nombre, info.estado);
+            encontrados++;
+        }
+    }
+    closedir(d);
+    if (!encontrados) printf(COLOR_INFO "No se encontraron coincidencias.\n" COLOR_RESET);
+}
+
+void procesos_mostrar_cpu_mem(int pid) {
+    InfoProceso info;
+    if (procesos_obtener_info(pid, &info) != 0) {
+        printf(COLOR_ERROR "PID %d no encontrado.\n" COLOR_RESET, pid);
+        return;
+    }
+    double cpu = calcular_cpu_pct(pid);
+    char mem_fmt[32];
+    utils_formatear_bytes(info.mem_kb * 1024, mem_fmt, sizeof(mem_fmt));
+    printf("PID: %d | Nombre: %s | CPU: %.2f%% | Memoria: %s\n",
+           info.pid, info.nombre, cpu, mem_fmt);
+}
+
+int procesos_finalizar(int pid) {
+    if (kill(pid, SIGTERM) == 0) {
+        char msg[64];
+        snprintf(msg, sizeof(msg), "Proceso %d finalizado (SIGTERM)", pid);
+        utils_log("procesos", msg);
+        printf(COLOR_OK "Proceso %d finalizado.\n" COLOR_RESET, pid);
+        return 0;
+    }
+    perror("kill");
+    return -1;
+}
+
+int procesos_suspender(int pid) {
+    if (kill(pid, SIGSTOP) == 0) {
+        printf(COLOR_OK "Proceso %d suspendido.\n" COLOR_RESET, pid);
+        return 0;
+    }
+    perror("kill");
+    return -1;
+}
+
+int procesos_reanudar(int pid) {
+    if (kill(pid, SIGCONT) == 0) {
+        printf(COLOR_OK "Proceso %d reanudado.\n" COLOR_RESET, pid);
+        return 0;
+    }
+    perror("kill");
+    return -1;
+}
