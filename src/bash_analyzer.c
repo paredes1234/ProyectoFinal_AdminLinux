@@ -120,3 +120,23 @@ ResultadoAnalisisBash bash_analizar_script_datos(const char *ruta_script) {
 
     return r;
 }
+
+/* Versión CLI: reutiliza el análisis estructurado y lo imprime en pantalla */
+void bash_analizar_script(const char *ruta_script) {
+    utils_titulo("Análisis de script Bash");
+    printf("Archivo: %s\n\n", ruta_script);
+
+    ResultadoAnalisisBash r = bash_analizar_script_datos(ruta_script);
+    printf("  %s", r.detalle);
+
+    utils_titulo("Resumen");
+    printf("Total de líneas analizadas: %d\n", r.total_lineas);
+    printf("Variables únicas detectadas: %d\n", r.total_vars);
+    printf("Ciclos FOR:    %d\n", r.num_for);
+    printf("Ciclos WHILE:  %d\n", r.num_while);
+    printf("Ciclos UNTIL:  %d\n", r.num_until);
+    printf("Condicionales IF: %d\n", r.num_if);
+    printf("Funciones:     %d\n", r.num_func);
+
+    free(r.detalle);
+}
