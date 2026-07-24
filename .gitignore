@@ -1,0 +1,5 @@
+obj/
+admin
+logs/*.log
+respaldos_data/
+*.o
