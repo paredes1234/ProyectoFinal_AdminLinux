@@ -36,22 +36,22 @@ Ambas interfaces utilizan los mismos módulos internos, por lo que comparten la 
 
 ```mermaid
 flowchart TD
-    CLI[main.c<br/>Interfaz CLI] --> CORE[Módulos del núcleo]
-    GUI[main_gui.c + src/gui/<br/>Interfaz GTK3] --> CORE
+    CLI["main.c<br/>Interfaz CLI"] --> CORE["Módulos del núcleo"]
+    GUI["main_gui.c y src/gui/<br/>Interfaz GTK3"] --> CORE
 
-    CORE --> P[procesos.c]
-    CORE --> A[archivos.c]
-    CORE --> C[comandos.c]
-    CORE --> R[respaldos.c]
-    CORE --> B[bash_analyzer.c]
-    CORE --> U[utils.c]
+    CORE --> P["procesos.c"]
+    CORE --> A["archivos.c"]
+    CORE --> C["comandos.c"]
+    CORE --> R["respaldos.c"]
+    CORE --> B["bash_analyzer.c"]
+    CORE --> U["utils.c"]
 
-    P --> PROC[/proc y señales POSIX]
-    A --> FS[Sistema de archivos]
-    C --> SHELL[Shell de Linux]
-    R --> BACKUPS[Versiones de respaldo]
-    B --> SCRIPTS[Scripts Bash]
-    U --> LOGS[Registros y utilidades]
+    P --> PROC["/proc y señales POSIX"]
+    A --> FS["Sistema de archivos"]
+    C --> SHELL["Shell de Linux"]
+    R --> BACKUPS["Versiones de respaldo"]
+    B --> SCRIPTS["Scripts Bash"]
+    U --> LOGS["Registros y utilidades"]
 ```
 
 ## Requisitos
