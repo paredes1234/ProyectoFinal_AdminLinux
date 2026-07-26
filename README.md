@@ -3,7 +3,6 @@
 ![Lenguaje C](https://img.shields.io/badge/Lenguaje-C%20GNU11-00599C?logo=c&logoColor=white)
 ![Interfaz GTK3](https://img.shields.io/badge/Interfaz-GTK3-4A86CF?logo=gtk&logoColor=white)
 ![Plataforma Linux](https://img.shields.io/badge/Plataforma-Linux-FCC624?logo=linux&logoColor=black)
-![Compilación GNU Make](https://img.shields.io/badge/Compilación-GNU%20Make-A42E2B?logo=gnu&logoColor=white)
 
 **ADMIN** es una aplicación desarrollada en C para administrar tareas frecuentes de un sistema Linux mediante una interfaz de terminal y una interfaz gráfica construida con GTK3.
 
@@ -31,28 +30,6 @@ El proyecto genera dos ejecutables:
 - `admin-gui`: interfaz gráfica GTK3.
 
 Ambas interfaces utilizan los mismos módulos internos, por lo que comparten la lógica principal del sistema.
-
-## Arquitectura
-
-```mermaid
-flowchart TD
-    CLI["main.c<br/>Interfaz CLI"] --> CORE["Módulos del núcleo"]
-    GUI["main_gui.c y src/gui/<br/>Interfaz GTK3"] --> CORE
-
-    CORE --> P["procesos.c"]
-    CORE --> A["archivos.c"]
-    CORE --> C["comandos.c"]
-    CORE --> R["respaldos.c"]
-    CORE --> B["bash_analyzer.c"]
-    CORE --> U["utils.c"]
-
-    P --> PROC["/proc y señales POSIX"]
-    A --> FS["Sistema de archivos"]
-    C --> SHELL["Shell de Linux"]
-    R --> BACKUPS["Versiones de respaldo"]
-    B --> SCRIPTS["Scripts Bash"]
-    U --> LOGS["Registros y utilidades"]
-```
 
 ## Requisitos
 
